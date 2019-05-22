@@ -22,7 +22,7 @@ public class Neo4jScheduelr  {
     public void scheduleRun() {
  
     	ConfigurableApplicationContext ctx = new GenericXmlApplicationContext();
-        ConfigurableEnvironment env = ctx.getEnvironment();
+        final ConfigurableEnvironment env = ctx.getEnvironment();
         MutablePropertySources propertySources = env.getPropertySources();
         
         try {
@@ -38,8 +38,32 @@ public class Neo4jScheduelr  {
  
     	logger.info("스케줄 실행 : " + dateFormat.format(calendar.getTime()));
     	
-    	Executor hd = new Executor();
-    	hd.readHadoop(env);
+    	 // 논문
+        new Thread(new Runnable() {
+        	@Override
+        	public void run() {
+				Executor hd = new Executor();
+				hd.readHadoop(env, 1);
+			}
+		}).start();
+        
+        // 연구자
+        new Thread(new Runnable() {
+        	@Override
+        	public void run() {
+        		Executor hd = new Executor();
+        		hd.readHadoop(env, 2);
+        	}
+        }).start();
+        
+        // 기관
+        new Thread(new Runnable() {
+        	@Override
+        	public void run() {
+        		Executor hd = new Executor();
+        		hd.readHadoop(env, 3);
+        	}
+        }).start();;
     }
     
 }

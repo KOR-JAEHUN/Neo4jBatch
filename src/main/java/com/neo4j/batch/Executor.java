@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.GenericXmlApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -25,9 +27,11 @@ import org.springframework.core.io.support.ResourcePropertySource;
  */
 public class Executor {
 	
+	private static final Logger logger = LoggerFactory.getLogger(Executor.class);
+	
 	public static void main(String[] args) {
 		ConfigurableApplicationContext ctx = new GenericXmlApplicationContext();
-        ConfigurableEnvironment env = ctx.getEnvironment();
+        final ConfigurableEnvironment env = ctx.getEnvironment();
         MutablePropertySources propertySources = env.getPropertySources();
         
         try {
@@ -36,17 +40,97 @@ public class Executor {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+        
+        long startTime = System.currentTimeMillis();
 
-		Executor hd = new Executor();
-		hd.readHadoop(env);
+        /*    */
+        // 논문
+//        Thread t1 = new Thread(new Runnable() {
+//        	@Override
+//        	public void run() {
+//				Executor hd = new Executor();
+//				hd.readHadoop(env, 1);
+//			}
+//		});
+//        t1.start();
+        
+        // 연구자
+        Thread t2 = new Thread(new Runnable() {
+        	@Override
+        	public void run() {
+        		Executor hd = new Executor();
+        		hd.readHadoop(env, 2);
+        	}
+        });
+        t2.start();
+        
+        // 기관
+//        Thread t3 = new Thread(new Runnable() {
+//        	@Override
+//        	public void run() {
+//        		Executor hd = new Executor();
+//        		hd.readHadoop(env, 3);
+//        	}
+//        });
+//        t3.start();
+        
+        // Pub
+//        Thread t4 = new Thread(new Runnable() {
+//        	@Override
+//        	public void run() {
+//        		Executor hd = new Executor();
+//        		hd.readHadoop(env, 4);
+//        	}
+//        });
+//        t4.start();
+        
+        /**/
+        // 위 노드 만들기가 끝날때까지 기다린다
+        try {
+//        	t4.join();
+//        	t3.join();
+        	t2.join();
+//			t1.join();
+			System.out.println("CreateNeo4j 전체 Thread 종료");
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+        /*
+        new Thread(new Runnable() {
+        	@Override
+        	public void run() {
+				Executor hd = new Executor();
+				hd.createRelation(env, 1);
+			}
+		}).start();
+        new Thread(new Runnable() {
+        	@Override
+        	public void run() {
+        		Executor hd = new Executor();
+        		hd.createRelation(env, 2);
+        	}
+        }).start();
+        new Thread(new Runnable() {
+        	@Override
+        	public void run() {
+        		Executor hd = new Executor();
+        		hd.createRelation(env, 3);
+        	}
+        }).start();
+        */
+       
+        long endTime = System.currentTimeMillis();
+        long time = endTime - startTime;
+        System.out.println("실행시간 =============== " + time/1000.0 + "초");
+        
 	}
 	
-	public void readHadoop(ConfigurableEnvironment env) {
+	public void readHadoop(ConfigurableEnvironment env, int seq) {
 		
 		Connection conn = null;
         ResultSet rs = null;
 		try{
-	        System.out.println("######### Executor 실행 #########");
+	        System.out.println("######### " + seq + "번째  Executor 실행 #########");
 	        String driver = env.getProperty("hive.driver");
 	        Class.forName(driver);
 	        
@@ -61,60 +145,102 @@ public class Executor {
 	        
 	        Statement stmt = conn.createStatement();
 	        
-//	        String sql = "SELECT  a.m330_cret_id as m330_cret_id, a.m310_arti_id as  m310_arti_id, SUBSTR(a.m310_arti_kor_titl,0,20) AS m310_arti_kor_titl " +
-//	        		 	 ", d.m330_belo_insi_id as m330_belo_insi_id , SUBSTR(d.m330_belo_insi_nm,0,20) AS m330_belo_insi_nm, D.M330_KRI_ID as m330_kri_id " +
-//	        		 	 ",D.M330_CRET_KOR_NM as m330_cret_kor_nm " + 
-//	        		 	 "FROM (SELECT C.M330_CRET_ID,B.M310_ARTI_ID,B.M310_ARTI_KOR_TITL, C.D311_BELO_INSI_ID, C.D311_BELO_INSI_NM " + 
-//	        		 	 "FROM   ODS_KCI.KCDM310 B, ODS_KCI.KCDD311 C " + 
-//	        		 	 "WHERE  B.M310_ARTI_ID= C.M310_ARTI_ID) A, ODS_KCI.KCDM330 D " + 
-//	        		 	 "WHERE D.M330_CRET_ID=a.m330_cret_id limit 50";
-	        String sql = "SELECT  a.m330_cret_id as m330_cret_id, a.m310_arti_id as m310_arti_id,\r\n" + 
-	        		" SUBSTR(a.m310_arti_kor_titl,0,20) AS m310_arti_kor_titl, d.m330_belo_insi_id as m330_belo_insi_id, SUBSTR(d.m330_belo_insi_nm,0,20) AS m330_belo_insi_nm, \r\n" + 
-	        		"d.m330_kri_id as m330_kri_id, d.m330_cret_kor_nm as m330_cret_kor_nm\r\n" + 
-	        		"FROM (SELECT C.M330_CRET_ID,B.M310_ARTI_ID,B.M310_ARTI_KOR_TITL, C.D311_BELO_INSI_ID, C.D311_BELO_INSI_NM\r\n" + 
-	        		"FROM   ods_kci.KCDM310 B, ods_kci.KCDD311 C\r\n" + 
-	        		"WHERE  B.M310_ARTI_ID= C.M310_ARTI_ID) A, ods_kci.KCDM330 D\r\n" + 
-	        		"WHERE D.M330_CRET_ID=a.m330_cret_id limit 10000";
+	        String sql = "";
+	        if(seq == 1) { // 논문
+//	        	sql ="SELECT  \r\n" + 
+//	        			"B.m310_arti_kor_titl as m310_arti_kor_titl, B.m310_arti_id as m310_arti_id\r\n" + 
+//	        			", A.d311_belo_insi_nm as d311_belo_insi_nm\r\n" + 
+//	        			"FROM  ods_kci.kcdd311 A, ods_kci.kcdm310 B\r\n" + 
+//	        			"WHERE A.m310_arti_id = B.m310_arti_id\r\n" + 
+//	        			"and A.d311_belo_insi_nm is not null and trim(A.d311_belo_insi_nm) != ''";
+	        	sql = "SELECT  \r\n" + 
+	        			"B.m310_arti_kor_titl as m310_arti_kor_titl, B.m310_arti_id as m310_arti_id\r\n" + 
+	        			", rtrim(ltrim(trim(A.d311_belo_insi_nm))) as d311_belo_insi_nm\r\n" + 
+	        			"FROM ods_kci.kcdd311 A, ods_kci.kcdm310 B\r\n" + 
+	        			"WHERE A.m310_arti_id = B.m310_arti_id\r\n" + 
+//	        			"and rtrim(ltrim(trim(A.d311_belo_insi_nm))) in ('한국원자력안전기술원', '한국은행', '한국인터넷진흥원')\r\n" +
+	        			"and A.d311_belo_insi_nm is not null and trim(A.d311_belo_insi_nm) != ''";
+	        }else if(seq == 2){ // 연구자
+//	        	sql = "SELECT  \r\n" + 
+//	        			"  B.m330_cret_kor_nm as m330_cret_kor_nm\r\n" + 
+//	        			", A.m310_arti_id as m310_arti_id\r\n" + 
+//	        			", B.m330_belo_insi_nm as m330_belo_insi_nm\r\n" + 
+//	        			"FROM  ods_kci.kcdd311 A, ods_kci.kcdm330 B\r\n" + 
+//	        			"WHERE A.m330_cret_id = B.m330_cret_id\r\n" + 
+//	        			"and B.m330_belo_insi_nm is not null and trim(B.m330_belo_insi_nm) != ''";
+//	        	sql = "SELECT  \r\n" + 
+//	        			"  B.m330_cret_kor_nm as m330_cret_kor_nm\r\n" + 
+//	        			"  B.m330_cret_id as m330_cret_id\r\n" + 
+//	        			", A.m310_arti_id as m310_arti_id\r\n" + 
+//	        			", rtrim(ltrim(trim(B.m330_belo_insi_nm))) as m330_belo_insi_nm\r\n" + 
+//	        			"FROM ods_kci.kcdd311 A, ods_kci.kcdm330 B\r\n" + 
+//	        			"WHERE A.m330_cret_id = B.m330_cret_id\r\n" + 
+////	        			"and rtrim(ltrim(trim(B.m330_belo_insi_nm))) in ('한국원자력안전기술원', '한국은행', '한국인터넷진흥원')\r\n" +
+//	        			"and B.m330_belo_insi_nm is not null and trim(B.m330_belo_insi_nm) != ''";
+	        	sql = "SELECT  \r\n" + 
+	        			"  B.m330_cret_kor_nm as m330_cret_kor_nm\r\n" + 
+	        			"  ,B.m330_cret_id as m330_cret_id\r\n" + 
+	        			"FROM ods_kci.kcdm330 B where m330_cret_kor_nm is not null"; 
+	        }else if(seq == 3) { // 기관
+//	        	sql = "select distinct m330_belo_insi_nm as m330_belo_insi_nm from ods_kci.KCDM330 \r\n" + 
+//	        			"where m330_belo_insi_nm is not null and trim(m330_belo_insi_nm) != ''";
+	        	sql = "select distinct rtrim(ltrim(trim(m330_belo_insi_nm))) as m330_belo_insi_nm from ods_kci.KCDM330 \r\n" + 
+	        			"where m330_belo_insi_nm is not null and trim(m330_belo_insi_nm) != ''";
+//	        			"and rtrim(ltrim(trim(m330_belo_insi_nm))) in ('한국원자력안전기술원', '한국은행', '한국인터넷진흥원')";
+	        }else if(seq == 4){ // 공저자
+	        	sql = "select\r\n" + 
+	        			"A.m310_arti_id as m310_arti_id, A.m330_cret_id as m330_cret_id, B.m310_arti_kor_titl as m310_arti_kor_titl\r\n" + 
+	        			"from\r\n" + 
+	        			"(\r\n" + 
+	        			"select m310_arti_id, m330_cret_id\r\n" + 
+	        			"from ods_kci.kcdd311\r\n" + 
+	        			"where m310_arti_id is not null and m330_cret_id is not null\r\n" + 
+	        			") A, ods_kci.kcdm310 B\r\n" + 
+	        			"where A.m310_arti_id = B.m310_arti_id and B.m310_arti_kor_titl is not null";
+	        }
+	        
 	        rs = stmt.executeQuery(sql);
 	        ResultSetMetaData rsmd = rs.getMetaData();
 	        List<String> columns = new ArrayList<String>(rsmd.getColumnCount());
 	        for(int i = 1; i <= rsmd.getColumnCount(); i++){
 	            columns.add(rsmd.getColumnName(i));
 	        }
-	        
+	        System.out.println("#########" + seq + "번째 Executor 쿼리 실행완료 #########");
+	        System.out.println("#########" + seq + "번째 Neo4j Cypher 시작 ##########");
 	        List<Map<String,String>> data = new ArrayList<Map<String,String>>();
 	        int i=0;
 	        rs.next();
 	        while(true){
-	        	 i++;
-	        	 HashMap<String,String> row = new HashMap<String, String>(columns.size());
-	             for(String col : columns) {
-	                 row.put(col, rs.getString(col));
-	             }
-	             data.add(row);
-	        
-	             if(i == 1000) {
-	            	 System.out.println("CYPHER START");
-	            	 createNeo4jExecutor(neo4j_url, neo4j_username, neo4j_password, data);
-	            	 data = new ArrayList<Map<String,String>>();
-	            	 System.out.println("CYPHER END");
-	            	 i=0;
-	             }
-	             if(!rs.next()) {
-	            	 System.out.println("LAST CYPHER START");
-	            	 createNeo4jExecutor(neo4j_url, neo4j_username, neo4j_password, data);
-	            	 System.out.println("LAST CYPHER END");
-	            	 break;
-	             }
+	        	 try {
+					i++;
+					 HashMap<String,String> row = new HashMap<String, String>(columns.size());
+					 for(String col : columns) {
+					     row.put(col, rs.getString(col));
+					 }
+					 data.add(row);
+					 if(!rs.next()) {
+						 createNeo4jExecutor(neo4j_url, neo4j_username, neo4j_password, data, seq);
+						 break;
+					 }
+      
+					 if(i == 1000) {
+						 createNeo4jExecutor(neo4j_url, neo4j_username, neo4j_password, data, seq);
+						 data = new ArrayList<Map<String,String>>();
+						 i=0;
+					 }
+				} catch (Exception e) {
+					logger.error(e.getMessage());
+					System.out.println("#########" + seq + "번째 Neo4j Cypher 실패 ##########");
+					break;
+				}
 	        
 	        }
 	        
 	        rs.close();
 	        conn.close();
-	        System.out.println("######### Executor 종료 #########");
+	        System.out.println("#########" + seq + "번째 Neo4j Cypher 종료 ##########");
 	        
 	    }catch(Exception ex){
-	        System.err.println("main error :");
 	        ex.printStackTrace();
 	    }finally {
 	        try{
@@ -134,17 +260,58 @@ public class Executor {
 	        }
 	    }
 	}
+	
+	public void createRelation(ConfigurableEnvironment env, int seq) {
+		
+		try{
+			System.out.println("######### " + seq + "번째 Relation  Executor 실행 #########");
+			String driver = env.getProperty("hive.driver");
+			Class.forName(driver);
+			
+			String neo4j_url = env.getProperty("neo4j.url");
+			String neo4j_username = env.getProperty("neo4j.username");
+			String neo4j_password = env.getProperty("neo4j.password");
+			
+			createRelationExecutor(neo4j_url, neo4j_username, neo4j_password, seq);
+			
+			System.out.println("#########" + seq + "번째 Relation Cypher 종료 ##########");
+			
+		}catch(Exception ex){
+			ex.printStackTrace();
+		}
+	}
 
-	public void createNeo4jExecutor(String uri, String username, String password, List<Map<String,String>> data) {
+	public void createNeo4jExecutor(String uri, String username, String password, List<Map<String,String>> data, int seq) throws Exception {
 
 		 try ( CreateNeo4j greeter = new CreateNeo4j( uri, username, password) )
          {
-             greeter.addData(data);
+             greeter.addData(data, seq);
              greeter.close();
          } catch (Exception e) {
- 			// TODO Auto-generated catch block
- 			e.printStackTrace();
+ 			throw new Exception(e);
  		 }
+	}
+	
+	public void createRelationExecutor(String uri, String username, String password, int seq) throws Exception {
+		
+		try ( CreateRelation greeter = new CreateRelation( uri, username, password) )
+		{
+			greeter.addRelation(seq);
+			greeter.close();
+		} catch (Exception e) {
+			throw new Exception(e);
+		}
+	}
+	
+	public void createUniqueExecutor(String uri, String username, String password, int seq) throws Exception {
+		
+		try ( CreateUnique greeter = new CreateUnique( uri, username, password) )
+		{
+			greeter.addUnique(seq);
+			greeter.close();
+		} catch (Exception e) {
+			throw new Exception(e);
+		}
 	}
 
 }
